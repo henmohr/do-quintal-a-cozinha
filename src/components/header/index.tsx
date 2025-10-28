@@ -44,9 +44,6 @@ export function Header() {
                 <MailOutlineIcon />
                 <span className="sr-only">Email</span>
               </Button>
-                  <MailOutlineIcon />
-                  <span className="sr-only">Mail</span>
-                </a>
               </Button>
             </nav>
           </div>
