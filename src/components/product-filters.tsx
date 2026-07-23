@@ -33,7 +33,11 @@ export function ProductFilters() {
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<string[]>([]);
 
   const resolvePath = useCallback(() => {
-    const params = new URLSearchParams(searchParams.get("search") ?? "");
+    const params = new URLSearchParams();
+    const search = searchParams.get("search");
+    if (search) {
+      params.set("search", search);
+    }
     selectedCategories.forEach((c) => params.append("categories", c));
     selectedPriceRanges.forEach((p) => params.append("price", p));
     router.push(pathname + "?" + params.toString());

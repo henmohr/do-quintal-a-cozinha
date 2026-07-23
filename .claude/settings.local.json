@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(cat:*)",
+      "WebFetch(domain:yet-another-react-lightbox.com)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(npm run lint:*)",
+      "Bash(cwebp:*)",
+      "Bash(npx prisma migrate dev:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

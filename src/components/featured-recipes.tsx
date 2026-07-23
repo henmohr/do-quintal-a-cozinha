@@ -70,7 +70,7 @@ export function FeaturedRecipes({
             <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 border-border hover:border-primary/20 overflow-hidden">
               <div className="relative h-64 overflow-hidden">
                 <Image
-                  src={recipe.media[0].media.url || "/placeholder.svg"}
+                  src={recipe.media[0]?.media.url || "/icone-receitas.webp"}
                   alt={recipe.title}
                   fill
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

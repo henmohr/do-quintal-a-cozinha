@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { formatMinutes, formatRecipeDifficulty } from "@/lib/utils";
 import { RecipeWithDetail } from "@/types/recipe";
 import { Clock, Users, ChefHat, ArrowLeft } from "lucide-react";
@@ -16,6 +18,8 @@ interface RecipeDetailProps {
 }
 
 export function RecipeDetail({ recipe, isLoading }: RecipeDetailProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -176,14 +180,18 @@ export function RecipeDetail({ recipe, isLoading }: RecipeDetailProps) {
               </div>
             </div>
 
-            <div className="relative h-96 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setLightboxOpen(true)}
+              className="relative h-96 rounded-lg overflow-hidden cursor-zoom-in group w-full"
+              aria-label="Ver imagem em tamanho completo"
+            >
               <Image
-                src={recipe.media[0].media.url || "/placeholder.svg"}
+                src={recipe.media[0]?.media.url || "/icone-receitas.webp"}
                 alt={recipe.title}
                 fill
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
-            </div>
+            </button>
 
             <Card>
               <CardHeader>
@@ -232,6 +240,18 @@ export function RecipeDetail({ recipe, isLoading }: RecipeDetailProps) {
           </div>
         </div>
       </div>
+
+      <ImageLightbox
+        images={[
+          {
+            url: recipe.media[0]?.media.url || "/icone-receitas.webp",
+            alt: recipe.title,
+          },
+        ]}
+        initialIndex={0}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 }

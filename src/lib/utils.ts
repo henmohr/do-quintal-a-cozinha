@@ -26,3 +26,25 @@ export function formatMinutes(mins: number) {
   return `${hours}h ${minutes}min`;
 }
 
+/**
+ * Formats a price value to Brazilian Real currency format.
+ *
+ * BUSINESS RULE: Products without prices should prompt customers to contact the producer.
+ * This supports gradual price adoption as producers transition to the platform.
+ *
+ * @param price - Price as Decimal/number or null
+ * @returns Formatted string "R$ 10,95" or "Consulte o produtor" if null
+ */
+export function formatPrice(price: number | null): string {
+  if (price === null || price === undefined) {
+    return "Consulte a produtora";
+  }
+
+  const numericPrice = typeof price === "number" ? price : Number(price);
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(numericPrice);
+}
+

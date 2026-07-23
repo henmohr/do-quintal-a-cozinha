@@ -35,11 +35,19 @@ export default function RootLayout({
       <body
         className={`${montserratSans.variable} ${geistMono.variable} antialiased`}
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-purple-600 focus:text-white focus:top-0 focus:left-0"
+        >
+          Pular para o conteúdo principal
+        </a>
         <Providers>
           <Suspense fallback={<div>Loading...</div>}>
             <div className="flex flex-col justify-between h-[100vh]">
               <Header />
-              <div className="flex-1 ">{children}</div>
+              <main id="main-content" className="flex-1" tabIndex={-1}>
+                {children}
+              </main>
               <Footer />
             </div>
           </Suspense>

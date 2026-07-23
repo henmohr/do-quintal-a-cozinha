@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { siteConfig } from "@/config/site";
@@ -7,7 +9,6 @@ import { MobileNav } from "@/components/mobile-nav";
 
 import InstagramIcon from "@mui/icons-material/Instagram";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
-
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full bg-yellow-400/95 backdrop-blur supports-[backdrop-filter]:bg-yellow-400/60">
@@ -21,7 +22,7 @@ export function Header() {
                 asChild
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 px-0 text-white hover:text-primary"
+                className="h-8 w-8 px-0 text-purple-600 hover:text-purple-800"
               >
                 <Link
                   href={siteConfig.links.ig}
@@ -36,15 +37,18 @@ export function Header() {
                 asChild
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 px-0 text-white hover:text-primary"
+                className="h-8 w-8 px-0 text-purple-600 hover:text-purple-800"
               >
                 <a
-                  href={`mailto:${siteConfig.mail}`}
-                  target="_blank"
-                  rel="noreferrer"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open('/api/email?subject=Contato via site', '_blank');
+                  }}
+                  className="cursor-pointer"
                 >
                   <MailOutlineIcon />
-                  <span className="sr-only">Mail</span>
+                  <span className="sr-only">Email</span>
                 </a>
               </Button>
             </nav>

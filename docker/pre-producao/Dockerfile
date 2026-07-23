@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 
+# Install production dependencies (prisma is now in dependencies for Prisma Client availability)
 RUN npm ci  --omit=dev
 
 
@@ -16,9 +17,7 @@ COPY --from=deps /usr/bin/dumb-init /usr/bin/dumb-init
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN npm run db:deploy
 RUN npm run build
-
 
 FROM base AS runner
 WORKDIR /app

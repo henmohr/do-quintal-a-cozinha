@@ -1,0 +1,2477 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Do Quintal à Cozinha API",
+    "version": "1.0.0",
+    "description": "API for managing rural women producers' products, profiles, and media. This platform connects producers from MMTR-SE with consumers.",
+    "contact": {
+      "name": "MMTR-SE",
+      "url": "https://github.com/catuaba07/do-quintal-a-cozinha"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Development server (Docker)"
+    },
+    {
+      "url": "https://your-production-domain.com",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Product",
+      "description": "Product management endpoints (CRUD operations with media support)"
+    },
+    {
+      "name": "Recipe",
+      "description": "Recipe management endpoints (CRUD operations with steps and media support)"
+    },
+    {
+      "name": "Profile",
+      "description": "Producer profile management endpoints"
+    },
+    {
+      "name": "Media",
+      "description": "Media management endpoints (images, audio, video)"
+    },
+    {
+      "name": "Integration",
+      "description": "External integration endpoints (WhatsApp, Email, Transcription)"
+    }
+  ],
+  "paths": {
+    "/api/product": {
+      "post": {
+        "tags": ["Product"],
+        "summary": "Create a new product with optional media",
+        "description": "Creates a new product for a producer. Optionally accepts an array of media items (images, audio, video). This operation uses a database transaction to ensure atomicity - if any step fails, the entire operation is rolled back and no data is saved.",
+        "operationId": "createProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["product_name", "phone_number", "category"],
+                "properties": {
+                  "product_name": {
+                    "type": "string",
+                    "description": "Name of the product",
+                    "example": "Queijo Artesanal"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Optional product description",
+                    "example": "Queijo artesanal feito com leite de cabra"
+                  },
+                  "price": {
+                    "type": "number",
+                    "format": "decimal",
+                    "minimum": 0,
+                    "description": "Optional product price in Brazilian Real (R$)",
+                    "example": 25.50
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"],
+                    "description": "Product category: AGRICOLA (agricultural), ARTESANATO (handicraft), PROCESSADO (processed)",
+                    "example": "PROCESSADO"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "description": "Phone number of the producer (must match an existing profile)",
+                    "example": "+5579999999999"
+                  },
+                  "media": {
+                    "type": "array",
+                    "description": "Optional array of media items to attach to the product",
+                    "items": {
+                      "type": "object",
+                      "required": ["url", "media_type"],
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "format": "uri",
+                          "description": "Public URL to the media file",
+                          "example": "https://storage.example.com/cheese.jpg"
+                        },
+                        "media_type": {
+                          "type": "string",
+                          "enum": ["IMAGE", "AUDIO", "VIDEO"],
+                          "description": "Type of media file",
+                          "example": "IMAGE"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "withMedia": {
+                  "summary": "Create product with media",
+                  "value": {
+                    "product_name": "Queijo Artesanal",
+                    "description": "Queijo artesanal feito com leite de cabra",
+                    "price": 25.50,
+                    "category": "PROCESSADO",
+                    "phone_number": "+5579999999999",
+                    "media": [
+                      {
+                        "url": "https://storage.example.com/cheese-front.jpg",
+                        "media_type": "IMAGE"
+                      },
+                      {
+                        "url": "https://storage.example.com/cheese-description.mp3",
+                        "media_type": "AUDIO"
+                      }
+                    ]
+                  }
+                },
+                "withoutMedia": {
+                  "summary": "Create product without media",
+                  "value": {
+                    "product_name": "Mel Silvestre",
+                    "description": "Mel puro extraído de colmeias silvestres",
+                    "category": "AGRICOLA",
+                    "phone_number": "+5579999999999"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Product created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "product_name": {
+                          "type": "string",
+                          "example": "Queijo Artesanal"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "Queijo artesanal feito com leite de cabra"
+                        },
+                        "price": {
+                          "type": "number",
+                          "format": "decimal",
+                          "nullable": true,
+                          "example": 25.50
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"],
+                          "example": "PROCESSADO"
+                        },
+                        "profile_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        },
+                        "media": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+                              },
+                              "url": {
+                                "type": "string",
+                                "format": "uri",
+                                "example": "https://storage.example.com/cheese-front.jpg"
+                              },
+                              "media_type": {
+                                "type": "string",
+                                "enum": ["IMAGE", "AUDIO", "VIDEO"],
+                                "example": "IMAGE"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Product created successfully",
+                  "data": {
+                    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "product_name": "Queijo Artesanal",
+                    "description": "Queijo artesanal feito com leite de cabra",
+                    "price": 25.50,
+                    "category": "PROCESSADO",
+                    "profile_id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890",
+                    "media": [
+                      {
+                        "id": "m1e2d3i4-a5b6-7890-abcd-ef1234567890",
+                        "url": "https://storage.example.com/cheese-front.jpg",
+                        "media_type": "IMAGE"
+                      },
+                      {
+                        "id": "m2e3d4i5-a6b7-8901-abcd-ef1234567890",
+                        "url": "https://storage.example.com/cheese-description.mp3",
+                        "media_type": "AUDIO"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "missingProductName": {
+                    "summary": "Missing product name",
+                    "value": {
+                      "error": "Product name is required"
+                    }
+                  },
+                  "missingPhoneNumber": {
+                    "summary": "Missing phone number",
+                    "value": {
+                      "error": "Phone number is required"
+                    }
+                  },
+                  "missingCategory": {
+                    "summary": "Missing category",
+                    "value": {
+                      "error": "Category is required"
+                    }
+                  },
+                  "invalidCategory": {
+                    "summary": "Invalid category",
+                    "value": {
+                      "error": "Category must be one of \"AGRICOLA\", \"ARTESANATO\", \"PROCESSADO\""
+                    }
+                  },
+                  "invalidMediaType": {
+                    "summary": "Invalid media type",
+                    "value": {
+                      "error": "Media item at index 0: media_type must be one of \"IMAGE\", \"AUDIO\", \"VIDEO\""
+                    }
+                  },
+                  "missingMediaUrl": {
+                    "summary": "Missing media URL",
+                    "value": {
+                      "error": "Media item at index 0: url is required and must be a non-empty string"
+                    }
+                  },
+                  "invalidPrice": {
+                    "summary": "Invalid price",
+                    "value": {
+                      "error": "Price must be a positive number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Profile not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error - transaction failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Failed to create product. Transaction rolled back."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Product"],
+        "summary": "Get product(s) by ID or phone number",
+        "description": "Retrieves a single product by product_id, or all products associated with a producer's phone_number. At least one query parameter must be provided. If product_id is provided, returns a single product object. If phone_number is provided, returns an array of all products for that producer.",
+        "operationId": "getProduct",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "query",
+            "description": "UUID of the specific product to retrieve",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            }
+          },
+          {
+            "name": "phone_number",
+            "in": "query",
+            "description": "Phone number of the producer to retrieve all products for",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "+5579999999999"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product(s) retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Single product (when product_id is provided)",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                            },
+                            "product_name": {
+                              "type": "string",
+                              "example": "Queijo Artesanal"
+                            },
+                            "description": {
+                              "type": "string",
+                              "nullable": true,
+                              "example": "Queijo artesanal feito com leite de cabra"
+                            },
+                            "price": {
+                              "type": "number",
+                              "format": "decimal",
+                              "nullable": true,
+                              "example": 25.50
+                            },
+                            "category": {
+                              "type": "string",
+                              "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"],
+                              "example": "PROCESSADO"
+                            },
+                            "profile_id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                            },
+                            "media": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "productId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "mediaId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "description": "Array of products (when phone_number is provided)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "product_name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "price": {
+                                "type": "number",
+                                "format": "decimal",
+                                "nullable": true
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"]
+                              },
+                              "profile_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "singleProduct": {
+                    "summary": "Get single product by product_id",
+                    "value": {
+                      "data": {
+                        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "product_name": "Queijo Artesanal",
+                        "description": "Queijo artesanal feito com leite de cabra",
+                        "price": 25.50,
+                        "category": "PROCESSADO",
+                        "profile_id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890",
+                        "media": [
+                          {
+                            "productId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "mediaId": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "productArray": {
+                    "summary": "Get all products by phone_number",
+                    "value": {
+                      "data": [
+                        {
+                          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                          "product_name": "Queijo Artesanal",
+                          "description": "Queijo artesanal feito com leite de cabra",
+                          "price": 25.50,
+                          "category": "PROCESSADO",
+                          "profile_id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        },
+                        {
+                          "id": "b2c3d4e5-f6g7-8901-bcde-fg2345678901",
+                          "product_name": "Mel Silvestre",
+                          "description": "Mel puro extraído de colmeias silvestres",
+                          "price": 35.00,
+                          "category": "AGRICOLA",
+                          "profile_id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required query parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Enter at least one of the attributes between phone_number and product_id in search params."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/product/{product_id}": {
+      "put": {
+        "tags": ["Product"],
+        "summary": "Update product details and/or media",
+        "description": "Updates a product's information and/or manages its media. All fields are optional - only provided fields will be updated. The `replace_media` flag controls media behavior: when false (default), new media is added to existing media; when true, all existing media is removed before adding new media. This operation uses a database transaction to ensure atomicity.",
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "UUID of the product to update",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "product_name": {
+                    "type": "string",
+                    "description": "Updated product name",
+                    "example": "Queijo Artesanal Premium"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Updated product description",
+                    "example": "Queijo artesanal premium feito com leite de cabra orgânico"
+                  },
+                  "price": {
+                    "type": "number",
+                    "format": "decimal",
+                    "minimum": 0,
+                    "description": "Updated product price in Brazilian Real (R$)",
+                    "example": 30.00
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"],
+                    "description": "Updated product category",
+                    "example": "PROCESSADO"
+                  },
+                  "media": {
+                    "type": "array",
+                    "description": "Media items to add (or replace if replace_media is true)",
+                    "items": {
+                      "type": "object",
+                      "required": ["url", "media_type"],
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "format": "uri",
+                          "description": "Public URL to the media file",
+                          "example": "https://storage.example.com/cheese-updated.jpg"
+                        },
+                        "media_type": {
+                          "type": "string",
+                          "enum": ["IMAGE", "AUDIO", "VIDEO"],
+                          "description": "Type of media file",
+                          "example": "IMAGE"
+                        }
+                      }
+                    }
+                  },
+                  "replace_media": {
+                    "type": "boolean",
+                    "description": "If true, removes all existing media before adding new media. If false (default), adds new media to existing media.",
+                    "default": false,
+                    "example": false
+                  }
+                }
+              },
+              "examples": {
+                "updateNameAndAddMedia": {
+                  "summary": "Update name and add new media (keep existing)",
+                  "value": {
+                    "product_name": "Queijo Artesanal Premium",
+                    "media": [
+                      {
+                        "url": "https://storage.example.com/cheese-closeup.jpg",
+                        "media_type": "IMAGE"
+                      }
+                    ],
+                    "replace_media": false
+                  }
+                },
+                "replaceAllMedia": {
+                  "summary": "Replace all media with new media",
+                  "value": {
+                    "media": [
+                      {
+                        "url": "https://storage.example.com/new-cheese-photo.jpg",
+                        "media_type": "IMAGE"
+                      },
+                      {
+                        "url": "https://storage.example.com/new-description.mp3",
+                        "media_type": "AUDIO"
+                      }
+                    ],
+                    "replace_media": true
+                  }
+                },
+                "updateDescriptionOnly": {
+                  "summary": "Update only description (no media changes)",
+                  "value": {
+                    "description": "Queijo artesanal premium feito com leite de cabra orgânico de nossa fazenda"
+                  }
+                },
+                "updateCategoryAndDescription": {
+                  "summary": "Update multiple fields without media",
+                  "value": {
+                    "category": "AGRICOLA",
+                    "description": "Produto agrícola certificado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Product successfully updated"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "product_name": {
+                          "type": "string",
+                          "example": "Queijo Artesanal Premium"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "Queijo artesanal premium feito com leite de cabra orgânico"
+                        },
+                        "price": {
+                          "type": "number",
+                          "format": "decimal",
+                          "nullable": true,
+                          "example": 30.00
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"],
+                          "example": "PROCESSADO"
+                        },
+                        "profile_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        },
+                        "media": {
+                          "type": "array",
+                          "description": "All media associated with the product after update",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "productId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                              },
+                              "mediaId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+                              },
+                              "media": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "example": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+                                  },
+                                  "url": {
+                                    "type": "string",
+                                    "format": "uri",
+                                    "example": "https://storage.example.com/cheese-closeup.jpg"
+                                  },
+                                  "media_type": {
+                                    "type": "string",
+                                    "enum": ["IMAGE", "AUDIO", "VIDEO"],
+                                    "example": "IMAGE"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "added_media_count": {
+                      "type": "integer",
+                      "description": "Number of new media items added in this update",
+                      "example": 1
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Product successfully updated",
+                  "data": {
+                    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "product_name": "Queijo Artesanal Premium",
+                    "description": "Queijo artesanal premium feito com leite de cabra orgânico",
+                    "price": 30.00,
+                    "category": "PROCESSADO",
+                    "profile_id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890",
+                    "media": [
+                      {
+                        "productId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "mediaId": "m1e2d3i4-a5b6-7890-abcd-ef1234567890",
+                        "media": {
+                          "id": "m1e2d3i4-a5b6-7890-abcd-ef1234567890",
+                          "url": "https://storage.example.com/cheese-front.jpg",
+                          "media_type": "IMAGE"
+                        }
+                      },
+                      {
+                        "productId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "mediaId": "m2e3d4i5-a6b7-8901-abcd-ef1234567890",
+                        "media": {
+                          "id": "m2e3d4i5-a6b7-8901-abcd-ef1234567890",
+                          "url": "https://storage.example.com/cheese-closeup.jpg",
+                          "media_type": "IMAGE"
+                        }
+                      }
+                    ]
+                  },
+                  "added_media_count": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "invalidCategory": {
+                    "summary": "Invalid category",
+                    "value": {
+                      "error": "Category must be one of \"AGRICOLA\", \"ARTESANATO\", \"PROCESSADO\""
+                    }
+                  },
+                  "invalidMediaType": {
+                    "summary": "Invalid media type",
+                    "value": {
+                      "error": "Media item at index 0: media_type must be one of \"IMAGE\", \"AUDIO\", \"VIDEO\""
+                    }
+                  },
+                  "missingMediaUrl": {
+                    "summary": "Missing media URL",
+                    "value": {
+                      "error": "Media item at index 0: url is required and must be a non-empty string"
+                    }
+                  },
+                  "invalidPrice": {
+                    "summary": "Invalid price",
+                    "value": {
+                      "error": "Price must be a positive number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Product not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error - transaction failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Failed to update product. Transaction rolled back."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Product"],
+        "summary": "Delete a product",
+        "description": "Permanently deletes a product from the database. This operation automatically cascades to remove all ProductMedia links associated with the product. Media files themselves are preserved in the Media table for potential reuse by other products.",
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "UUID of the product to delete",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Product deleted successfully"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Product deleted successfully"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Product not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipe": {
+      "post": {
+        "tags": ["Recipe"],
+        "summary": "Create a new recipe with optional media and steps",
+        "description": "Creates a new recipe for a producer. Accepts title, description, times, servings, difficulty, ingredients (array of strings), and optional media/steps arrays. Uses a database transaction to ensure atomicity.",
+        "operationId": "createRecipe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone_number", "title", "description", "preparation_time_in_minutes", "cooking_time_in_minutes", "number_of_servings", "difficulty", "ingredients"],
+                "properties": {
+                  "phone_number": {
+                    "type": "string",
+                    "description": "Phone number of the producer (must match an existing profile)",
+                    "example": "+5579999999999"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Recipe title",
+                    "example": "Moqueca Baiana"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Recipe description",
+                    "example": "Traditional Brazilian fish stew from Bahia"
+                  },
+                  "preparation_time_in_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Preparation time in minutes",
+                    "example": 30
+                  },
+                  "cooking_time_in_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Cooking time in minutes",
+                    "example": 45
+                  },
+                  "number_of_servings": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of servings",
+                    "example": 4
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": ["EASY", "INTERMEDIARY", "HARD"],
+                    "description": "Recipe difficulty level",
+                    "example": "INTERMEDIARY"
+                  },
+                  "ingredients": {
+                    "type": "array",
+                    "description": "Array of ingredient strings",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": ["500g fish", "200ml coconut milk", "2 tomatoes", "1 onion"]
+                  },
+                  "steps": {
+                    "type": "array",
+                    "description": "Optional array of recipe steps",
+                    "items": {
+                      "type": "object",
+                      "required": ["step_number", "instruction"],
+                      "properties": {
+                        "step_number": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "example": 1
+                        },
+                        "instruction": {
+                          "type": "string",
+                          "example": "Cut the fish into pieces"
+                        }
+                      }
+                    }
+                  },
+                  "media": {
+                    "type": "array",
+                    "description": "Optional array of media items",
+                    "items": {
+                      "$ref": "#/components/schemas/MediaItem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recipe created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Recipe created successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Recipe"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Profile not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Recipe"],
+        "summary": "Get recipe(s) by ID or phone number",
+        "description": "Retrieves a single recipe by recipe_id, or all recipes associated with a producer's phone_number",
+        "operationId": "getRecipe",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "query",
+            "description": "UUID of the specific recipe to retrieve",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "phone_number",
+            "in": "query",
+            "description": "Phone number of the producer to retrieve all recipes for",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe(s) retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/Recipe"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Recipe"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/recipe/{recipe_id}": {
+      "put": {
+        "tags": ["Recipe"],
+        "summary": "Update recipe details, steps, and/or media",
+        "description": "Updates a recipe's information with smart step merging (updates existing by step_number, adds new ones). All fields are optional.",
+        "operationId": "updateRecipe",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "UUID of the recipe to update",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "preparation_time_in_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cooking_time_in_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "number_of_servings": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": ["EASY", "INTERMEDIARY", "HARD"]
+                  },
+                  "ingredients": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "steps": {
+                    "type": "array",
+                    "description": "Steps to update/add (smart merge by step_number)",
+                    "items": {
+                      "$ref": "#/components/schemas/RecipeStep"
+                    }
+                  },
+                  "media": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/MediaItem"
+                    }
+                  },
+                  "replace_media": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "If true, removes all existing media before adding new media"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recipe updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Recipe successfully updated"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Recipe"
+                    },
+                    "added_media_count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Recipe"],
+        "summary": "Delete a recipe",
+        "description": "Permanently deletes a recipe. Cascades to RecipeStep and RecipeMedia.",
+        "operationId": "deleteRecipe",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Recipe deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/recipe/{recipe_id}/{media_id}": {
+      "delete": {
+        "tags": ["Recipe"],
+        "summary": "Remove media from a recipe",
+        "description": "Permanently deletes a media file and removes its association with the recipe",
+        "operationId": "deleteRecipeMedia",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "media_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "post": {
+        "tags": ["Profile"],
+        "summary": "Create a new producer profile",
+        "description": "Creates a new profile for a rural woman producer. The phone_number must be unique and will be used as the primary identifier for the profile. This profile is required before creating products.",
+        "operationId": "createProfile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone_number", "name"],
+                "properties": {
+                  "phone_number": {
+                    "type": "string",
+                    "description": "Phone number of the producer (must be unique)",
+                    "example": "+5579999999999"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Full name of the producer",
+                    "example": "Maria da Silva"
+                  },
+                  "social_name": {
+                    "type": "string",
+                    "description": "Preferred social name (optional)",
+                    "example": "Maria"
+                  },
+                  "instagram": {
+                    "type": "string",
+                    "description": "Instagram handle (optional)",
+                    "example": "@maria.artesanatos"
+                  }
+                }
+              },
+              "examples": {
+                "fullProfile": {
+                  "summary": "Create profile with all fields",
+                  "value": {
+                    "phone_number": "+5579999999999",
+                    "name": "Maria da Silva",
+                    "social_name": "Maria",
+                    "instagram": "@maria.artesanatos"
+                  }
+                },
+                "minimalProfile": {
+                  "summary": "Create profile with required fields only",
+                  "value": {
+                    "phone_number": "+5579988888888",
+                    "name": "Ana Santos"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Profile created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Profile created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        },
+                        "phone_number": {
+                          "type": "string",
+                          "example": "+5579999999999"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Maria da Silva"
+                        },
+                        "social_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "Maria"
+                        },
+                        "instagram": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "@maria.artesanatos"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Profile created successfully",
+                  "data": {
+                    "id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890",
+                    "phone_number": "+5579999999999",
+                    "name": "Maria da Silva",
+                    "social_name": "Maria",
+                    "instagram": "@maria.artesanatos"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "missingPhoneNumber": {
+                    "summary": "Missing phone number",
+                    "value": {
+                      "error": "Phone number is required"
+                    }
+                  },
+                  "missingName": {
+                    "summary": "Missing name",
+                    "value": {
+                      "error": "Name is required"
+                    }
+                  },
+                  "profileExists": {
+                    "summary": "Profile already exists",
+                    "value": {
+                      "error": "Profile already exists"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Internal Server Error"
+                    },
+                    "stack": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/{phone_number}": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Get producer profile by phone number",
+        "description": "Retrieves a producer's profile information using their phone number as the identifier.",
+        "operationId": "getProfile",
+        "parameters": [
+          {
+            "name": "phone_number",
+            "in": "path",
+            "description": "Phone number of the producer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "+5579999999999"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "profile": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        },
+                        "phone_number": {
+                          "type": "string",
+                          "example": "+5579999999999"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Maria da Silva"
+                        },
+                        "social_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "Maria"
+                        },
+                        "instagram": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "@maria.artesanatos"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "profile": {
+                    "id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890",
+                    "phone_number": "+5579999999999",
+                    "name": "Maria da Silva",
+                    "social_name": "Maria",
+                    "instagram": "@maria.artesanatos"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Profile not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Update producer profile",
+        "description": "Updates a producer's profile information. All fields are optional - only provided fields will be updated. The phone_number in the path is used to identify the profile and cannot be changed.",
+        "operationId": "updateProfile",
+        "parameters": [
+          {
+            "name": "phone_number",
+            "in": "path",
+            "description": "Phone number of the producer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "+5579999999999"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Updated full name",
+                    "example": "Maria da Silva Santos"
+                  },
+                  "social_name": {
+                    "type": "string",
+                    "description": "Updated social name",
+                    "example": "Mari"
+                  },
+                  "instagram": {
+                    "type": "string",
+                    "description": "Updated Instagram handle",
+                    "example": "@maria.queijos"
+                  }
+                }
+              },
+              "examples": {
+                "updateName": {
+                  "summary": "Update only name",
+                  "value": {
+                    "name": "Maria da Silva Santos"
+                  }
+                },
+                "updateSocialAndInstagram": {
+                  "summary": "Update social name and Instagram",
+                  "value": {
+                    "social_name": "Mari",
+                    "instagram": "@mari.queijos"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Profile edited with successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+                        },
+                        "phone_number": {
+                          "type": "string",
+                          "example": "+5579999999999"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Maria da Silva Santos"
+                        },
+                        "social_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "Mari"
+                        },
+                        "instagram": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "@maria.queijos"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Profile edited with successfully",
+                  "data": {
+                    "id": "p1r2o3f4-i5l6-7890-abcd-ef1234567890",
+                    "phone_number": "+5579999999999",
+                    "name": "Maria da Silva Santos",
+                    "social_name": "Mari",
+                    "instagram": "@maria.queijos"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Profile not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Profile"],
+        "summary": "Delete producer profile",
+        "description": "Permanently deletes a producer's profile from the database. This operation automatically cascades to remove all products associated with the profile.",
+        "operationId": "deleteProfile",
+        "parameters": [
+          {
+            "name": "phone_number",
+            "in": "path",
+            "description": "Phone number of the producer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "+5579999999999"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Profile deleted successfully"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Profile deleted successfully"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Profile not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/product/{product_id}/{media_id}": {
+      "delete": {
+        "tags": ["Media"],
+        "summary": "Remove media from a product",
+        "description": "Permanently deletes a media file from the database and removes its association with the product. This operation cannot be undone.",
+        "operationId": "deleteMedia",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "UUID of the product",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            }
+          },
+          {
+            "name": "media_id",
+            "in": "path",
+            "description": "UUID of the media to delete",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Media deleted successfully"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Media deleted successfully"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product or media not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "productNotFound": {
+                    "summary": "Product not found",
+                    "value": {
+                      "error": "Product not found"
+                    }
+                  },
+                  "mediaNotFound": {
+                    "summary": "Media not found",
+                    "value": {
+                      "error": "Media not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whatsapp": {
+      "get": {
+        "tags": ["Integration"],
+        "summary": "WhatsApp contact redirect",
+        "description": "Redirects the user to a WhatsApp conversation with the producer. If a product ID is provided, includes a pre-filled message about that specific product. If a profile ID is provided, includes a generic greeting message. This endpoint performs a 302 redirect to the WhatsApp web/app URL.",
+        "operationId": "whatsappRedirect",
+        "parameters": [
+          {
+            "name": "product",
+            "in": "query",
+            "description": "UUID of the product to inquire about",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "description": "UUID of the producer profile to contact",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to WhatsApp",
+            "headers": {
+              "Location": {
+                "description": "WhatsApp URL with pre-filled message",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "https://wa.me/5579999999999?text=Ol%C3%A1%21%20Estou%20interessado(a)%20no%20produto%3A%20Queijo%20Artesanal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Product ID or Profile ID is required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product, profile, or phone number not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "productNotFound": {
+                    "summary": "Product not found",
+                    "value": {
+                      "error": "Product not found"
+                    }
+                  },
+                  "profileNotFound": {
+                    "summary": "Profile not found",
+                    "value": {
+                      "error": "Profile not found"
+                    }
+                  },
+                  "phoneNotFound": {
+                    "summary": "Phone number not found",
+                    "value": {
+                      "error": "Phone number not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Internal server error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/email": {
+      "get": {
+        "tags": ["Integration"],
+        "summary": "Email contact redirect",
+        "description": "Redirects the user to their default email client with a pre-filled recipient and optional subject line. This endpoint performs a 302 redirect to a mailto: URL. The recipient email is configured in the site configuration and never exposed in the frontend.",
+        "operationId": "emailRedirect",
+        "parameters": [
+          {
+            "name": "subject",
+            "in": "query",
+            "description": "Subject line for the email (optional, defaults to 'Contato via site')",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "Dúvida sobre produto"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to email client",
+            "headers": {
+              "Location": {
+                "description": "Mailto URL with pre-filled subject",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "mailto:contato@example.com?subject=D%C3%BAvida%20sobre%20produto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Internal server error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transcription": {
+      "post": {
+        "tags": ["Integration"],
+        "summary": "Audio transcription using Groq Whisper",
+        "description": "Transcribes audio files to text using Groq's Whisper large-v3-turbo model. Optimized for Brazilian Portuguese but supports multiple languages. Requires a publicly accessible audio file URL.",
+        "operationId": "transcribeAudio",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Public URL to the audio file",
+                    "example": "https://storage.example.com/audio/product-description.mp3"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Language code for transcription (default: 'pt' for Portuguese)",
+                    "default": "pt",
+                    "example": "pt"
+                  }
+                }
+              },
+              "examples": {
+                "portugueseAudio": {
+                  "summary": "Transcribe Portuguese audio (default)",
+                  "value": {
+                    "url": "https://storage.example.com/audio/product-description.mp3",
+                    "language": "pt"
+                  }
+                },
+                "withoutLanguage": {
+                  "summary": "Transcribe with automatic language (defaults to pt)",
+                  "value": {
+                    "url": "https://storage.example.com/audio/interview.mp3"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Audio transcribed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Audio transcribed successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "Groq Whisper API response with transcription",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "description": "Transcribed text from the audio file",
+                          "example": "Este é um queijo artesanal feito com leite de cabra, produzido em nossa propriedade rural."
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Audio transcribed successfully",
+                  "data": {
+                    "text": "Este é um queijo artesanal feito com leite de cabra, produzido em nossa propriedade rural."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing audio URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Audio URL is required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error - transcription failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Failed to transcribe audio"
+                    },
+                    "details": {
+                      "type": "object",
+                      "description": "Error details from Groq API"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Integration"],
+        "summary": "Method not allowed",
+        "description": "This endpoint only supports POST requests. GET requests will return a 405 Method Not Allowed error.",
+        "operationId": "transcriptionMethodNotAllowed",
+        "responses": {
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Method not allowed. Use POST instead."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "API_KEY",
+        "description": "API key for authentication. Contact the development team to obtain your key."
+      }
+    },
+    "schemas": {
+      "Category": {
+        "type": "string",
+        "enum": ["AGRICOLA", "ARTESANATO", "PROCESSADO"],
+        "description": "Product category enum",
+        "example": "PROCESSADO"
+      },
+      "MediaType": {
+        "type": "string",
+        "enum": ["IMAGE", "AUDIO", "VIDEO"],
+        "description": "Media type enum",
+        "example": "IMAGE"
+      },
+      "RecipeDifficulty": {
+        "type": "string",
+        "enum": ["EASY", "INTERMEDIARY", "HARD"],
+        "description": "Recipe difficulty level enum",
+        "example": "INTERMEDIARY"
+      },
+      "Recipe": {
+        "type": "object",
+        "description": "Complete recipe model with steps and ingredients",
+        "required": ["id", "title", "description", "preparation_time_in_minutes", "cooking_time_in_minutes", "number_of_servings", "difficulty", "ingredients", "profile_id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Recipe unique identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Recipe title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Recipe description"
+          },
+          "preparation_time_in_minutes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Preparation time in minutes"
+          },
+          "cooking_time_in_minutes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Cooking time in minutes"
+          },
+          "number_of_servings": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of servings"
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/RecipeDifficulty"
+          },
+          "ingredients": {
+            "type": "array",
+            "description": "Array of ingredient strings (stored as JSON)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "profile_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the producer profile"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Recipe creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Recipe last update timestamp"
+          },
+          "steps": {
+            "type": "array",
+            "description": "Recipe preparation steps",
+            "items": {
+              "$ref": "#/components/schemas/RecipeStep"
+            }
+          },
+          "media": {
+            "type": "array",
+            "description": "Recipe media (images, videos)",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "RecipeStep": {
+        "type": "object",
+        "description": "Individual recipe preparation step",
+        "required": ["step_number", "instruction"],
+        "properties": {
+          "step_number": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Step sequence number"
+          },
+          "instruction": {
+            "type": "string",
+            "description": "Step instruction text"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "description": "Complete product model",
+        "required": ["id", "product_name", "category", "profile_id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product unique identifier",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "product_name": {
+            "type": "string",
+            "description": "Name of the product",
+            "example": "Queijo Artesanal"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Product description (optional)",
+            "example": "Queijo artesanal feito com leite de cabra"
+          },
+          "price": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Product price in Brazilian Real (R$, optional)",
+            "example": 25.50
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "profile_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the producer profile",
+            "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+          }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "description": "Producer profile model",
+        "required": ["id", "phone_number", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Profile unique identifier",
+            "example": "p1r2o3f4-i5l6-7890-abcd-ef1234567890"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Producer's phone number (unique)",
+            "example": "+5579999999999"
+          },
+          "name": {
+            "type": "string",
+            "description": "Producer's full name",
+            "example": "Maria da Silva"
+          },
+          "social_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Preferred social name (optional)",
+            "example": "Maria"
+          },
+          "instagram": {
+            "type": "string",
+            "nullable": true,
+            "description": "Instagram handle (optional)",
+            "example": "@maria.artesanatos"
+          }
+        }
+      },
+      "Media": {
+        "type": "object",
+        "description": "Media file model",
+        "required": ["id", "url", "media_type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Media unique identifier",
+            "example": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Public URL to the media file",
+            "example": "https://storage.example.com/cheese-photo.jpg"
+          },
+          "media_type": {
+            "$ref": "#/components/schemas/MediaType"
+          }
+        }
+      },
+      "MediaItem": {
+        "type": "object",
+        "description": "Media item for request body (product creation/update)",
+        "required": ["url", "media_type"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Public URL to the media file",
+            "example": "https://storage.example.com/cheese-photo.jpg"
+          },
+          "media_type": {
+            "$ref": "#/components/schemas/MediaType"
+          }
+        }
+      },
+      "ProductMedia": {
+        "type": "object",
+        "description": "Junction table linking products to media",
+        "required": ["productId", "mediaId"],
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the product",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "mediaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the media",
+            "example": "m1e2d3i4-a5b6-7890-abcd-ef1234567890"
+          },
+          "media": {
+            "$ref": "#/components/schemas/Media",
+            "description": "Nested media object (when included)"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "description": "Standard error response",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Resource not found"
+          }
+        }
+      },
+      "SuccessMessage": {
+        "type": "object",
+        "description": "Standard success response",
+        "required": ["message"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Success message",
+            "example": "Operation completed successfully"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request - validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Product name is required"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Product not found"
+                }
+              }
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

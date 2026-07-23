@@ -3,7 +3,7 @@ services:
     container_name: quintal
     build:
       context: $PROD_PATH
-      dockerfile: $PROD_PATH/docker/pre-producao/Dockerfile
+      dockerfile: $PROD_PATH/docker/producao/Dockerfile
     env_file:
       - $PROD_PATH/.env
     ports:

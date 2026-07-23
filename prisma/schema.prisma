@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider      = "prisma-client-js"
   output        = "../node_modules/.prisma/client"
@@ -23,12 +17,14 @@ model Profile {
   instagram    String?
 
   Product Product[]
+  Recipe  Recipe[]
 }
 
 model Product {
   id           String         @id
   product_name String
   description  String?
+  price        Decimal?
   category     Category
   media        ProductMedia[]
 
@@ -43,6 +39,7 @@ model Media {
 
   productMedia ProductMedia[]
   recipeMedia  RecipeMedia[]
+  storyMedia   StoryMedia[]
 }
 
 model ProductMedia {
@@ -59,8 +56,8 @@ model RecipeMedia {
   recipeId String
   mediaId  String
 
-  recipe Recipe @relation(fields: [recipeId], references: [id])
-  media  Media  @relation(fields: [mediaId], references: [id])
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  media  Media  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@id([recipeId, mediaId])
 }
@@ -79,6 +76,9 @@ model Recipe {
   ingredients Json
   steps       RecipeStep[]
   media       RecipeMedia[]
+
+  profile    Profile @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id String
 }
 
 model RecipeStep {
@@ -88,6 +88,36 @@ model RecipeStep {
 
   recipe    Recipe @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
   recipe_id String
+}
+
+model Story {
+  id          String   @id
+  title       String
+  name        String
+  description String
+  content     String
+  region      Region @relation(fields: [regionId], references: [id], name:"RegionStories")
+  regionId      String
+  slug        String @unique
+
+
+  media StoryMedia[]
+}
+
+model StoryMedia {
+  storyId String
+  mediaId String
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, mediaId])
+}
+
+model Region {
+  id    String  @id
+  name  String
+  stories Story[] @relation(name: "RegionStories")
 }
 
 enum MediaType {

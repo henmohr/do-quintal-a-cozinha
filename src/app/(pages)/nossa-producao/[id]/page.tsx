@@ -1,8 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { useGetProductById } from "@/hooks/use-get-product-by-id";
 import { useMobile } from "@/hooks/use-mobile";
+import { formatPrice } from "@/lib/utils";
 import { Divider } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,6 +22,7 @@ export default function Page({ params }: Props) {
   const { id } = use(params);
   const { data, isLoading } = useGetProductById({ id });
   const [selectedMedia, setSelectedMedia] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const isMobile = useMobile();
 
   const handleNextMedia = useCallback(() => {
@@ -88,7 +91,7 @@ export default function Page({ params }: Props) {
                   >
                     <div className="relative aspect-square min-w-[100px]">
                       <Image
-                        src={media.media.url || "/placeholder.svg"}
+                      src={media.media.url || "/icone-produtos.webp"}
                         alt={data?.product_name || ""}
                         fill
                         className="object-cover transition-transform group-hover:scale-105"
@@ -108,18 +111,22 @@ export default function Page({ params }: Props) {
               )}
             </div>
             <div>
-              <div className="relative aspect-video md:min-w-[500px]">
+              <button
+                onClick={() => setLightboxOpen(true)}
+                className="relative aspect-video md:min-w-[500px] cursor-zoom-in group"
+                aria-label="Ver imagem em tamanho completo"
+              >
                 <Image
                   src={
                     data.media.at(selectedMedia)?.media.url ||
-                    "/placeholder.svg"
+                    "/icone-produtos.webp"
                   }
                   alt={data?.product_name || ""}
                   style={{ objectFit: "contain" }}
                   fill
                   className="object-cover transition-transform group-hover:scale-105"
                 />
-              </div>
+              </button>
             </div>
           </div>
           <div className="flex flex-col gap-4">
@@ -137,7 +144,7 @@ export default function Page({ params }: Props) {
             </div>
             <div>
               <p className="font-semibold text-base">
-                R$ {Math.floor(Math.random() * 600).toFixed(2)}
+                {formatPrice(data.price)}
               </p>
             </div>
             <Divider />
@@ -145,11 +152,11 @@ export default function Page({ params }: Props) {
               <p className="font-semibold text-base">Feito por</p>
               <div className="flex gap-5">
                 <Image
-                  src={"/placeholder.svg"}
+                  src={"/profile-placeholder.webp"}
                   alt={`Foto de perfil da ${data.profile.name}`}
                   width={100}
                   height={100}
-                  className="object-cover transition-transform group-hover:scale-105"
+                  className="object-cover rounded-full transition-transform group-hover:scale-105"
                 />
                 <div className="font-bold text-base">
                   <p>{data.profile.name}</p>
@@ -157,11 +164,29 @@ export default function Page({ params }: Props) {
               </div>
             </div>
             <div>
-              <Button>Contatar</Button>
+              <Button
+                onClick={() => {
+                  window.open(`/api/whatsapp?product=${data.id}`, "_blank");
+                }}
+              >
+                Contatar
+              </Button>
             </div>
           </div>
         </div>
       </div>
+
+      <ImageLightbox
+        images={data.media
+          .filter((media) => media.media.media_type === "IMAGE")
+          .map((media) => ({
+            url: media.media.url || "/icone-produtos.webp",
+            alt: data.product_name,
+          }))}
+        initialIndex={selectedMedia}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </main>
   );
 }

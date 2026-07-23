@@ -24,7 +24,7 @@
     ],
     "paths": {
       "@/*": [
-        "./src/*"
+        "./src/*", "./app/*"
       ]
     }
   },
@@ -34,7 +34,7 @@
     ".next/types/**/*.ts",
     "next-env.d.ts",
     "dist/types/**/*.ts"
-  ],
+, "prisma/seeds/stories.js", "prisma/seeds/main.js"  ],
   "exclude": [
     "node_modules",
     "**/*.stories.ts",
